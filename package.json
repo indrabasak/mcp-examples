@@ -1,0 +1,47 @@
+{
+  "name": "weather",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "weather": "./build/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf build && tsc && yarn chmod:weather && yarn chmod:echo",
+    "chmod:weather": "chmod 755 build/weather/index.js && chmod 755 build/weather/weather-server.js && chmod 755 build/weather/weather-client.js",
+    "chmod:echo": "chmod 755 build/echo/echo-server.js && chmod 755 build/echo/echo-client.js",
+    "run:weather-azure-client": "node --env-file .env.local build/weather/azure-openai-weather-client.js",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint --fix 'src/**/*.ts'"
+  },
+  "files": [
+    "build"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@azure/identity": "^4.9.1",
+    "@langchain/core": "^0.3.55",
+    "@langchain/langgraph": "^0.2.72",
+    "@langchain/mcp-adapters": "^0.4.3",
+    "@langchain/openai": "^0.5.10",
+    "dotenv": "^16.5.0",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^4.2.0",
+    "@types/node": "^22.15.3",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jest": "^28.11.0",
+    "eslint-plugin-prettier": "^5.2.6",
+    "eslint-plugin-stylistic": "^0.0.0-0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  }
+}
