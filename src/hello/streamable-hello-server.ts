@@ -1,5 +1,5 @@
 import { HelloServer } from './hello-server.js';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { InMemoryEventStore } from '@modelcontextprotocol/sdk/examples/shared/inMemoryEventStore.js';
@@ -16,109 +16,81 @@ export class StreamableHelloServer extends HelloServer {
     this.app.use(express.json());
     // Map to store transports by session ID
     this.transports = {};
-    this.addPost();
+    this.app.post('/mcp', this.postHandler.bind(this));
     this.addGet();
     this.addDelete();
     this.addListeners();
   }
 
-  private addPost() {
-    // Handle POST requests for client-to-server communication
-    this.app.post('/mcp', async (req, res) => {
-      console.log(`Request received: ${req.method} ${req.url}`, { body: req.body });
+  private async postHandler(req: Request, res: Response) {
+    console.log('Received MCP request:', req.body);
+    try {
+      // Check for existing session ID
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      let transport: StreamableHTTPServerTransport;
 
-      // Capture response data for logging
-      const originalJson = res.json;
-      res.json = function (body) {
-        console.log(`Response being sent:`, JSON.stringify(body, null, 2));
-        return originalJson.call(this, body);
-      };
+      if (sessionId && this.transports[sessionId]) {
+        // Reuse existing transport
+        transport = this.transports[sessionId];
+      } else if (!sessionId && isInitializeRequest(req.body)) {
+        // New initialization request
+        const eventStore = new InMemoryEventStore();
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          eventStore, // Enable resumability
+          onsessioninitialized: (sessionId) => {
+            // Store the transport by session ID when session is initialized
+            // This avoids race conditions where requests might come in before the session is stored
+            console.log(`Session initialized with ID: ${sessionId}`);
+            this.transports[sessionId] = transport;
+          }
+        });
 
-      try {
-        // Check for existing session ID
-        const sessionId = req.headers['mcp-session-id'] as string | undefined;
-        let transport: StreamableHTTPServerTransport;
+        // Set up onclose handler to clean up transport when closed
+        transport.onclose = () => {
+          const sid = transport.sessionId;
+          if (sid && this.transports[sid]) {
+            console.log(`Transport closed for session ${sid}, removing from transports map`);
+            delete this.transports[sid];
+          }
+        };
 
-        if (sessionId && this.transports[sessionId]) {
-          // Reuse existing transport
-          console.log(`Reusing session: ${sessionId}`);
-          transport = this.transports[sessionId];
-        } else if (!sessionId && isInitializeRequest(req.body)) {
-          console.log(`New session request: ${req.body.method}`);
-          // New initialization request
-          const eventStore = new InMemoryEventStore();
-          transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => randomUUID(),
-            enableJsonResponse: true,
-            eventStore, // Enable resumability
-            onsessioninitialized: (sessionId) => {
-              // Store the transport by session ID
-              console.log(`Session initialized: ${sessionId}`);
-              this.transports[sessionId] = transport;
-            }
-          });
+        // Connect the transport to the MCP server BEFORE handling the request
+        // so responses can flow back through the same transport
+        const server = this.server;
+        await server.connect(transport);
 
-          // Clean up transport when closed
-          transport.onclose = () => {
-            const sid = transport.sessionId;
-            if (sid && this.transports[sid]) {
-              console.log(`Transport closed for session ${sid}, removing from transports map`);
-              delete this.transports[sid];
-            }
-          };
-
-          // Connect to the MCP server BEFORE handling the request
-          console.log(`Connecting transport to MCP server...`);
-          await this.server.connect(transport);
-          // await this.server.sendLoggingMessage({
-          //   level: 'info',
-          //   data: 'Server started successfully'
-          // });
-          console.log(`Transport connected to MCP server successfully`);
-
-          console.log(`Handling initialization request...`);
-          await transport.handleRequest(req, res, req.body);
-          console.log(`Initialization request handled, response sent`);
-          return; // Already handled
-        } else {
-          console.error('Invalid request: No valid session ID or initialization request');
-          // Invalid request
-          res.status(400).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32000,
-              message: 'Bad Request: No valid session ID provided'
-            },
-            id: null
-          });
-          return;
-        }
-
-        console.log(`Handling request for session: ${transport.sessionId}`);
-        console.log(`Request body:`, JSON.stringify(req.body, null, 2));
-
-        // Handle the request with existing transport
-        console.log(`Calling transport.handleRequest...`);
-        const startTime = Date.now();
         await transport.handleRequest(req, res, req.body);
-        const duration = Date.now() - startTime;
-        console.log(
-          `Request handling completed in ${duration}ms for session: ${transport.sessionId}`
-        );
-      } catch (error) {
-        console.error('Error handling MCP request:', error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32603,
-              message: 'Internal server error'
-            },
-            id: null
-          });
-        }
+        return; // Already handled
+      } else {
+        // Invalid request - no session ID or not initialization request
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Bad Request: No valid session ID provided'
+          },
+          id: null
+        });
+        return;
       }
-    });
+
+      // Handle the request with existing transport - no need to reconnect
+      // The existing transport is already connected to the server
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      console.error('Error handling MCP request:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Internal server error'
+          },
+          id: null
+        });
+      }
+    }
   }
 
   private addGet() {

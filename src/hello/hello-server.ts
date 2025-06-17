@@ -1,74 +1,22 @@
-// import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import {
-  CallToolRequestSchema,
-  CallToolResult,
-  ListToolsRequestSchema
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-// import { ToolHelper } from './tool-helper.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export class HelloServer {
   protected server: McpServer;
-  // protected server: Server;
-  // private toolHelper: ToolHelper;
   constructor() {
-    this.server = new McpServer({
-      name: 'Hello App',
-      version: '1.0.0',
-      capabilities: {
-        logging: {},
-        resources: {},
-        tools: {}
-      }
-    });
-
-    // this.server = new Server(
-    //   {
-    //     name: 'Hello App',
-    //     version: '1.0.0'
-    //   },
-    //   {
-    //     capabilities: {
-    //       logging: {},
-    //       prompts: {},
-    //       resources: {},
-    //       tools: {}
-    //     }
-    //   }
-    // );
-
-    // this.toolHelper = new ToolHelper(this.server);
-    // this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-    //   console.log('List Tools Request Received');
-    //   return this.toolHelper.getTools();
-    // });
-    // this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    //   return await this.toolHelper.handleToolCall(request.params.name, request.params.arguments);
-    // });
+    this.server = new McpServer(
+      {
+        name: 'Hello Server',
+        version: '1.0.0'
+      },
+      { capabilities: { logging: {} } }
+    );
+    this.addTools();
   }
 
   private addTools() {
-    // this.server.registerTool(
-    //   'greet',
-    //   {
-    //     name: 'Greeting Tool', // Display name for UI
-    //     description: 'A simple greeting tool',
-    //     inputSchema: {
-    //       name: z.string().describe('Name to greet')
-    //     }
-    //   },
-    //   async ({ name }): Promise<CallToolResult> => {
-    //     return {
-    //       content: [
-    //         {
-    //           type: 'text',
-    //           text: `Hello, ${name}!`
-    //         }
-    //       ]
-    //     };
-    //   }
-    // );
+    // Register a simple tool that returns a greeting
     this.server.tool(
       'greet',
       'A simple greeting tool',
@@ -76,7 +24,6 @@ export class HelloServer {
         name: z.string().describe('Name to greet')
       },
       async ({ name }): Promise<CallToolResult> => {
-        console.log(`Tool Called: greet (name=${name})`);
         return {
           content: [
             {
@@ -88,31 +35,19 @@ export class HelloServer {
       }
     );
 
-    this.server.tool(
-      'get-session',
-      'gets the session id and context',
-      {},
-      async (): Promise<CallToolResult> => {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `session`
-            }
-          ]
-        };
-      }
-    );
-
-    // Register a tool that sends multiple greetings with notifications
+    // Register a tool that sends multiple greetings with notifications (with annotations)
     this.server.tool(
       'multi-greet',
       'A tool that sends different greetings with delays between them',
       {
         name: z.string().describe('Name to greet')
       },
+      {
+        title: 'Multiple Greeting Tool',
+        readOnlyHint: true,
+        openWorldHint: false
+      },
       async ({ name }, { sendNotification }): Promise<CallToolResult> => {
-        console.log(`Tool Called: multi-greet (name=${name})`);
         const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
         await sendNotification({

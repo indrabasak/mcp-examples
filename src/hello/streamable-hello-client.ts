@@ -81,16 +81,16 @@ export class StreamableHelloClient {
     await this.client.connect(this.transport);
 
     // Get tools with custom configuration
-    // const tools = await loadMcpTools('Hello App', this.client, {
-    //   // Whether to throw errors if a tool fails to load (optional, default: true)
-    //   throwOnLoadError: true,
-    //   // Whether to prefix tool names with the server name (optional, default: false)
-    //   prefixToolNameWithServerName: false,
-    //   // Optional additional prefix for tool names (optional, default: "")
-    //   additionalToolNamePrefix: ''
-    // });
-    //
-    // this.agent = createReactAgent({ llm: this.model, tools });
+    const tools = await loadMcpTools('Hello App', this.client, {
+      // Whether to throw errors if a tool fails to load (optional, default: true)
+      throwOnLoadError: true,
+      // Whether to prefix tool names with the server name (optional, default: false)
+      prefixToolNameWithServerName: false,
+      // Optional additional prefix for tool names (optional, default: "")
+      additionalToolNamePrefix: ''
+    });
+
+    this.agent = createReactAgent({ llm: this.model, tools });
   }
 
   public async listTools() {
@@ -193,9 +193,9 @@ async function main() {
   await client.connect();
   console.log('Streamable Hello Client is running.');
   await client.listTools();
-  // await client.callTool('greet', { name: 'Indra' });
+  await client.callTool('greet', { name: 'Indra' });
   // await client.callTool('get-session', {});
-  // await client.callTool('multi-greet', { name: 'Indra' });
+  await client.callTool('multi-greet', { name: 'Indra' });
 }
 
 main().catch((error) => {
