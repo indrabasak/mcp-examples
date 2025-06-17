@@ -8,9 +8,8 @@ import 'dotenv/config';
 import {
   CallToolRequest,
   CallToolResultSchema,
-  ListResourcesResultSchema,
-  LoggingMessageNotificationSchema,
-  ResourceListChangedNotificationSchema
+  ListToolsRequest,
+  ListToolsResultSchema
 } from '@modelcontextprotocol/sdk/types.js';
 
 export class AzureStreamableWeatherClient {
@@ -39,45 +38,45 @@ export class AzureStreamableWeatherClient {
     });
 
     this.client = new Client({
-      name: 'Weather Client',
+      name: 'Streamable Weather Client',
       version: '1.0.0'
     });
 
-    this.client.onerror = (error) => {
-      console.error('\x1b[31mClient error:', error, '\x1b[0m');
-    };
-
-    // Set up notification handlers
-    this.client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
-      this.notificationCount++;
-      console.log(
-        `\nNotification #${this.notificationCount}: ${notification.params.level} - ${notification.params.data}`
-      );
-      // Re-display the prompt
-      process.stdout.write('> ');
-    });
-
-    this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async () => {
-      console.log(`\nResource list changed notification received!`);
-      try {
-        if (!this.client) {
-          console.log('Client disconnected, cannot fetch resources');
-          return;
-        }
-        const resourcesResult = await this.client.request(
-          {
-            method: 'resources/list',
-            params: {}
-          },
-          ListResourcesResultSchema
-        );
-        console.log('Available resources count:', resourcesResult.resources.length);
-      } catch {
-        console.log('Failed to list resources after change notification');
-      }
-      // Re-display the prompt
-      process.stdout.write('> ');
-    });
+    // this.client.onerror = (error) => {
+    //   console.error('\x1b[31mClient error:', error, '\x1b[0m');
+    // };
+    //
+    // // Set up notification handlers
+    // this.client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
+    //   this.notificationCount++;
+    //   console.log(
+    //     `\nNotification #${this.notificationCount}: ${notification.params.level} - ${notification.params.data}`
+    //   );
+    //   // Re-display the prompt
+    //   process.stdout.write('> ');
+    // });
+    //
+    // this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async () => {
+    //   console.log(`\nResource list changed notification received!`);
+    //   try {
+    //     if (!this.client) {
+    //       console.log('Client disconnected, cannot fetch resources');
+    //       return;
+    //     }
+    //     const resourcesResult = await this.client.request(
+    //       {
+    //         method: 'resources/list',
+    //         params: {}
+    //       },
+    //       ListResourcesResultSchema
+    //     );
+    //     console.log('Available resources count:', resourcesResult.resources.length);
+    //   } catch {
+    //     console.log('Failed to list resources after change notification');
+    //   }
+    //   // Re-display the prompt
+    //   process.stdout.write('> ');
+    // });
   }
 
   public async connect() {
@@ -85,18 +84,18 @@ export class AzureStreamableWeatherClient {
     this.sessionId = this.transport.sessionId;
     console.log('Transport created with session ID:', this.sessionId);
     console.log('Connected to MCP server');
-    //
-    // // Get tools with custom configuration
-    // const tools = await loadMcpTools('Weather App', this.client, {
-    //   // Whether to throw errors if a tool fails to load (optional, default: true)
-    //   throwOnLoadError: true,
-    //   // Whether to prefix tool names with the server name (optional, default: false)
-    //   prefixToolNameWithServerName: false,
-    //   // Optional additional prefix for tool names (optional, default: "")
-    //   additionalToolNamePrefix: ''
-    // });
-    //
-    // this.agent = createReactAgent({ llm: this.model, tools });
+
+    // Get tools with custom configuration
+    const tools = await loadMcpTools('Weather App', this.client, {
+      // Whether to throw errors if a tool fails to load (optional, default: true)
+      throwOnLoadError: true,
+      // Whether to prefix tool names with the server name (optional, default: false)
+      prefixToolNameWithServerName: false,
+      // Optional additional prefix for tool names (optional, default: "")
+      additionalToolNamePrefix: ''
+    });
+
+    this.agent = createReactAgent({ llm: this.model, tools });
   }
 
   public async listTools() {
@@ -106,17 +105,18 @@ export class AzureStreamableWeatherClient {
     }
 
     try {
-      const toolsRequest = {
+      const toolsRequest: ListToolsRequest = {
         method: 'tools/list',
         params: {}
       };
-      const toolsResult = await this.client.request(toolsRequest, ListResourcesResultSchema);
+      console.log('------------------ Tools requested');
+      const toolsResult = await this.client.request(toolsRequest, ListToolsResultSchema);
 
       console.log('Available tools:');
-      if (toolsResult.resources.length === 0) {
+      if (toolsResult.tools.length === 0) {
         console.log('  No tools available');
       } else {
-        for (const tool of toolsResult.resources) {
+        for (const tool of toolsResult.tools) {
           console.log(`  - ${tool.name}: ${tool.description}`);
         }
       }
@@ -126,6 +126,7 @@ export class AzureStreamableWeatherClient {
   }
 
   public async callTool(name: string, args: Record<string, unknown>) {
+    console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^');
     if (!this.client) {
       console.log('Not connected to server.');
       return;
@@ -144,16 +145,49 @@ export class AzureStreamableWeatherClient {
       const result = await this.client.request(request, CallToolResultSchema);
 
       console.log('Tool result:');
+
       result.content.forEach((item) => {
         if (item.type === 'text') {
           console.log(`  ${item.text}`);
+        } else if (item.type === 'resource') {
+          console.log(`  [Embedded Resource: ${item.resource.uri}]`);
+        } else if (item.type === 'image') {
+          console.log(`  [Image: ${item.mimeType}]`);
+        } else if (item.type === 'audio') {
+          console.log(`  [Audio: ${item.mimeType}]`);
         } else {
-          console.log(`  ${item.type} content:`, item);
+          console.log(`  [Unknown content type]:`, item);
         }
       });
     } catch (error) {
       console.log(`Error calling tool ${name}: ${error}`);
     }
+  }
+
+  public async quit(): Promise<void> {
+    if (this.client && this.transport) {
+      try {
+        // First try to terminate the session gracefully
+        if (this.transport.sessionId) {
+          try {
+            console.log('Terminating session before exit...');
+            await this.transport.terminateSession();
+            console.log('Session terminated successfully');
+          } catch (error) {
+            console.error('Error terminating session:', error);
+          }
+        }
+
+        // Then close the transport
+        await this.transport.close();
+      } catch (error) {
+        console.error('Error closing transport:', error);
+      }
+    }
+
+    process.stdin.setRawMode(false);
+    console.log('\nGoodbye!');
+    process.exit(0);
   }
 
   public async invoke(message: string) {
@@ -168,7 +202,7 @@ async function main() {
   await client.connect();
   console.error('Azure OpenAI Streamable Weather client running');
   await client.listTools();
-  // await client.callTool('get-alerts', { state: 'OR' });
+  await client.callTool('get-alerts', { state: 'OR' });
   // await client.callTool('get-forecast', { state: 'OR' });
   // let result = await client.invoke('What is the weather like in Seattle?');
   // let finalMessage = result.messages[result.messages.length - 1];

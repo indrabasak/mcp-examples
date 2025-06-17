@@ -13,7 +13,6 @@ import {
   LoggingMessageNotificationSchema,
   ResourceListChangedNotificationSchema
 } from '@modelcontextprotocol/sdk/types.js';
-import * as readline from 'node:readline';
 
 export class StreamableHelloClient {
   private transport: StreamableHTTPClientTransport;
@@ -46,36 +45,36 @@ export class StreamableHelloClient {
     });
 
     // Set up notification handlers
-    this.client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
-      this.notificationCount++;
-      console.log(
-        `\nNotification #${this.notificationCount}: ${notification.params.level} - ${notification.params.data}`
-      );
-      // Re-display the prompt
-      process.stdout.write('> ');
-    });
-
-    this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async () => {
-      console.log(`\nResource list changed notification received!`);
-      try {
-        if (!this.client) {
-          console.log('Client disconnected, cannot fetch resources');
-          return;
-        }
-        const resourcesResult = await this.client.request(
-          {
-            method: 'resources/list',
-            params: {}
-          },
-          ListResourcesResultSchema
-        );
-        console.log('Available resources count:', resourcesResult.resources.length);
-      } catch {
-        console.log('Failed to list resources after change notification');
-      }
-      // Re-display the prompt
-      process.stdout.write('> ');
-    });
+    // this.client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
+    //   this.notificationCount++;
+    //   console.log(
+    //     `\nNotification #${this.notificationCount}: ${notification.params.level} - ${notification.params.data}`
+    //   );
+    //   // Re-display the prompt
+    //   process.stdout.write('> ');
+    // });
+    //
+    // this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async () => {
+    //   console.log(`\nResource list changed notification received!`);
+    //   try {
+    //     if (!this.client) {
+    //       console.log('Client disconnected, cannot fetch resources');
+    //       return;
+    //     }
+    //     const resourcesResult = await this.client.request(
+    //       {
+    //         method: 'resources/list',
+    //         params: {}
+    //       },
+    //       ListResourcesResultSchema
+    //     );
+    //     console.log('Available resources count:', resourcesResult.resources.length);
+    //   } catch {
+    //     console.log('Failed to list resources after change notification');
+    //   }
+    //   // Re-display the prompt
+    //   process.stdout.write('> ');
+    // });
   }
 
   public async connect() {
