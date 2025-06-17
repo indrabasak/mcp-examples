@@ -5,7 +5,7 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { InMemoryEventStore } from '@modelcontextprotocol/sdk/examples/shared/inMemoryEventStore.js';
 import { randomUUID } from 'node:crypto';
 
-export class StreamableServerUtil {
+export class StreamableServer {
   private server: McpServer;
   private app!: express.Express;
   private transports: { [sessionId: string]: StreamableHTTPServerTransport };

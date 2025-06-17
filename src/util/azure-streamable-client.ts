@@ -1,8 +1,11 @@
 import {
   CallToolRequest,
   CallToolResultSchema,
+  ListResourcesResultSchema,
   ListToolsRequest,
-  ListToolsResultSchema
+  ListToolsResultSchema,
+  LoggingMessageNotificationSchema,
+  ResourceListChangedNotificationSchema
 } from '@modelcontextprotocol/sdk/types.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -18,6 +21,7 @@ export class AzureStreamableClient {
   private readonly client: Client;
   private sessionId: string | undefined = undefined;
   private agent: any;
+  private notificationCount: number = 0;
 
   constructor(name: string, version: string, url: string) {
     const credential = new DefaultAzureCredential();
@@ -39,6 +43,41 @@ export class AzureStreamableClient {
     this.client = new Client({
       name,
       version
+    });
+    this.addNotificationHandlers();
+  }
+
+  private addNotificationHandlers() {
+    // Set up notification handlers
+    this.client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
+      this.notificationCount++;
+      console.log(
+        `\nNotification #${this.notificationCount}: ${notification.params.level} - ${notification.params.data}`
+      );
+      // Re-display the prompt
+      process.stdout.write('> ');
+    });
+
+    this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async () => {
+      console.log(`\nResource list changed notification received!`);
+      try {
+        if (!this.client) {
+          console.log('Client disconnected, cannot fetch resources');
+          return;
+        }
+        const resourcesResult = await this.client.request(
+          {
+            method: 'resources/list',
+            params: {}
+          },
+          ListResourcesResultSchema
+        );
+        console.log('Available resources count:', resourcesResult.resources.length);
+      } catch {
+        console.log('Failed to list resources after change notification');
+      }
+      // Re-display the prompt
+      process.stdout.write('> ');
     });
   }
 

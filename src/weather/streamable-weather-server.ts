@@ -1,24 +1,21 @@
-import { Request, Response } from 'express';
 import { WeatherServer } from './weather-server.js';
-import { StreamableServerUtil } from '../util/streamable-server-util.js';
+import { StreamableServer } from '../util/streamable-server.js';
 
 export class StreamableWeatherServer extends WeatherServer {
-  private util: StreamableServerUtil;
+  private streamableServer: StreamableServer;
 
   public constructor() {
     super();
-    this.util = new StreamableServerUtil(this.server, 3000);
+    this.streamableServer = new StreamableServer(this.server, 3000);
   }
 
   public async connect() {
-    this.util.connect();
+    this.streamableServer.connect();
   }
 
   public async close() {
     await this.server.close();
   }
-
-  public async handleRequest(req: Request, res: Response) {}
 }
 
 async function main() {

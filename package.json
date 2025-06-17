@@ -13,6 +13,8 @@
     "run:weather-azure-client": "node --env-file .env.local build/weather/azure-stdio-weather-client.js",
     "run:streamable-weather-server": "node build/weather/streamable-weather-server.js",
     "run:streamable-weather-client": "node --env-file .env.local build/weather/azure-streamable-weather-client.js",
+    "run:streamable-hello-server": " node build/hello/streamable-hello-server.js",
+    "run:streamable-hello-client": "node --env-file .env.local build/hello/streamable-hello-client.js",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'"
   },
