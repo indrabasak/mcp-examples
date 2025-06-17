@@ -13,6 +13,7 @@ import {
   LoggingMessageNotificationSchema,
   ResourceListChangedNotificationSchema
 } from '@modelcontextprotocol/sdk/types.js';
+import * as readline from 'node:readline';
 
 export class StreamableHelloClient {
   private transport: StreamableHTTPClientTransport;
@@ -139,32 +140,11 @@ export class StreamableHelloClient {
       console.log(`Calling tool '${name}' with args:`, args);
       const result = await this.client.request(request, CallToolResultSchema);
 
-      // console.log('Tool result:');
-      // result.content.forEach((item) => {
-      //   if (item.type === 'text') {
-      //     console.log(`  ${item.text}`);
-      //   } else {
-      //     console.log(`  ${item.type} content:`, item);
-      //   }
-      // });
-
       console.log('Tool result:');
-      // const resourceLinks: ResourceLink[] = [];
 
       result.content.forEach((item) => {
         if (item.type === 'text') {
           console.log(`  ${item.text}`);
-          // } else if (item.type === 'resource_link') {
-          //   const resourceLink = item as ResourceLink;
-          //   resourceLinks.push(resourceLink);
-          //   console.log(`  📁 Resource Link: ${resourceLink.name}`);
-          //   console.log(`     URI: ${resourceLink.uri}`);
-          //   if (resourceLink.mimeType) {
-          //     console.log(`     Type: ${resourceLink.mimeType}`);
-          //   }
-          //   if (resourceLink.description) {
-          //     console.log(`     Description: ${resourceLink.description}`);
-          //   }
         } else if (item.type === 'resource') {
           console.log(`  [Embedded Resource: ${item.resource.uri}]`);
         } else if (item.type === 'image') {
@@ -175,16 +155,35 @@ export class StreamableHelloClient {
           console.log(`  [Unknown content type]:`, item);
         }
       });
-
-      // Offer to read resource links
-      // if (resourceLinks.length > 0) {
-      //   console.log(
-      //     `\nFound ${resourceLinks.length} resource link(s). Use 'read-resource <uri>' to read their content.`
-      //   );
-      // }
     } catch (error) {
       console.log(`Error calling tool ${name}: ${error}`);
     }
+  }
+
+  public async quit(): Promise<void> {
+    if (this.client && this.transport) {
+      try {
+        // First try to terminate the session gracefully
+        if (this.transport.sessionId) {
+          try {
+            console.log('Terminating session before exit...');
+            await this.transport.terminateSession();
+            console.log('Session terminated successfully');
+          } catch (error) {
+            console.error('Error terminating session:', error);
+          }
+        }
+
+        // Then close the transport
+        await this.transport.close();
+      } catch (error) {
+        console.error('Error closing transport:', error);
+      }
+    }
+
+    process.stdin.setRawMode(false);
+    console.log('\nGoodbye!');
+    process.exit(0);
   }
 }
 
@@ -194,8 +193,8 @@ async function main() {
   console.log('Streamable Hello Client is running.');
   await client.listTools();
   await client.callTool('greet', { name: 'Indra' });
-  // await client.callTool('get-session', {});
   await client.callTool('multi-greet', { name: 'Indra' });
+  await client.quit();
 }
 
 main().catch((error) => {
