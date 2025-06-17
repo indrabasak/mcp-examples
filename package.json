@@ -8,9 +8,11 @@
   },
   "scripts": {
     "build": "rm -rf build && tsc && yarn chmod:weather && yarn chmod:echo",
-    "chmod:weather": "chmod 755 build/weather/index.js && chmod 755 build/weather/weather-server.js && chmod 755 build/weather/weather-client.js",
+    "chmod:weather": "chmod 755 build/weather/index.js && chmod 755 build/weather/stdio-weather-server.js && chmod 755 build/weather/weather-client.js",
     "chmod:echo": "chmod 755 build/echo/echo-server.js && chmod 755 build/echo/echo-client.js",
-    "run:weather-azure-client": "node --env-file .env.local build/weather/azure-openai-weather-client.js",
+    "run:weather-azure-client": "node --env-file .env.local build/weather/azure-stdio-weather-client.js",
+    "run:streamable-weather-server": "node build/weather/streamable-weather-server.js",
+    "run:streamable-weather-client": "node --env-file .env.local build/weather/azure-streamable-weather-client.js",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'"
   },
@@ -22,16 +24,19 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@azure/identity": "^4.9.1",
-    "@langchain/core": "^0.3.55",
-    "@langchain/langgraph": "^0.2.72",
-    "@langchain/mcp-adapters": "^0.4.3",
-    "@langchain/openai": "^0.5.10",
+    "@azure/identity": "^4.10.1",
+    "@langchain/core": "^0.3.58",
+    "@langchain/langgraph": "^0.3.2",
+    "@langchain/mcp-adapters": "^0.5.2",
+    "@langchain/openai": "^0.5.13",
+    "@modelcontextprotocol/sdk": "^1.12.3",
     "dotenv": "^16.5.0",
+    "express": "^5.1.0",
     "zod": "^3.24.3"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^4.2.0",
+    "@types/express": "^5.0.1",
     "@types/node": "^22.15.3",
     "@typescript-eslint/eslint-plugin": "^8.24.1",
     "@typescript-eslint/parser": "^8.31.1",

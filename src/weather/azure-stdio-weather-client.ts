@@ -2,11 +2,11 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity';
 import { AzureChatOpenAI } from '@langchain/openai';
-import 'dotenv/config';
 import { loadMcpTools } from '@langchain/mcp-adapters';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import 'dotenv/config';
 
-export class AzureOpenaiWeatherClient {
+export class AzureStdioWeatherClient {
   private model: AzureChatOpenAI;
   private readonly transport: StdioClientTransport;
   private readonly client: Client;
@@ -27,7 +27,7 @@ export class AzureOpenaiWeatherClient {
 
     this.transport = new StdioClientTransport({
       command: 'node',
-      args: ['./build/weather/weather-server.js']
+      args: ['./build/weather/stdio-weather-server.js']
     });
 
     this.client = new Client({
@@ -53,17 +53,14 @@ export class AzureOpenaiWeatherClient {
   }
 
   public async invoke(message: string) {
-    const agentResponse = await this.agent.invoke({
+    return this.agent.invoke({
       messages: [{ role: 'user', content: message }]
     });
-    // console.log(agentResponse);
-
-    return agentResponse;
   }
 }
 
 async function main() {
-  const client = new AzureOpenaiWeatherClient();
+  const client = new AzureStdioWeatherClient();
   await client.connect();
   console.error('Azure OpenAI Weather client running');
   let result = await client.invoke('What is the weather like in Seattle?');

@@ -8,7 +8,7 @@ export class WeatherClient {
   constructor() {
     this.transport = new StdioClientTransport({
       command: 'node',
-      args: ['./build/weather/weather-server.js']
+      args: ['./build/weather/stdio-weather-server.js']
     });
 
     this.client = new Client({

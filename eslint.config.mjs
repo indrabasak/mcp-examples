@@ -8,32 +8,32 @@ import { FlatCompat } from '@eslint/eslintrc';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const compat = new FlatCompat({
-    baseDirectory: __dirname,
-    recommendedConfig: js.configs.recommended,
-    allConfig: js.configs.all
+  baseDirectory: __dirname,
+  recommendedConfig: js.configs.recommended,
+  allConfig: js.configs.all
 });
 
 export default [
-    {
-        ignores: ['**/build']
+  {
+    ignores: ['**/build']
+  },
+  ...compat.extends(
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:prettier/recommended'
+  ),
+  {
+    plugins: {
+      '@typescript-eslint': typescriptEslint
     },
-    ...compat.extends(
-        'eslint:recommended',
-        'plugin:@typescript-eslint/recommended',
-        'plugin:prettier/recommended'
-    ),
-    {
-        plugins: {
-            '@typescript-eslint': typescriptEslint
-        },
 
-        languageOptions: {
-            parser: tsParser
-        },
+    languageOptions: {
+      parser: tsParser
+    },
 
-        rules: {
-            'prettier/prettier': 'error',
-            '@typescript-eslint/no-explicit-any': 'off'
-        }
+    rules: {
+      'prettier/prettier': 'error',
+      '@typescript-eslint/no-explicit-any': 'off'
     }
+  }
 ];

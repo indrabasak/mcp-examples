@@ -1,6 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { WeatherUtil } from './weather-util.js';
 import {
   AlertFeature,
@@ -10,8 +9,8 @@ import {
   PointsResponse
 } from './types.js';
 
-export class WeatherServer {
-  private server: McpServer;
+export abstract class WeatherServer {
+  protected server: McpServer;
   constructor() {
     this.server = new McpServer({
       name: 'Weather App',
@@ -26,11 +25,9 @@ export class WeatherServer {
     this.addForecastTool();
   }
 
-  public async connect() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.log('Echo MCP Server started');
-  }
+  public abstract connect(): Promise<void>;
+
+  public abstract close(): Promise<void>;
 
   private addAlertsTool() {
     this.server.tool(
@@ -180,14 +177,3 @@ export class WeatherServer {
     ].join('\n');
   }
 }
-
-async function main() {
-  const server = new WeatherServer();
-  await server.connect();
-  console.error('Weather Server running on stdio');
-}
-
-main().catch((error) => {
-  console.error('Fatal error in main():', error);
-  process.exit(1);
-});
